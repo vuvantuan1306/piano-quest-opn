@@ -4,7 +4,7 @@ import './App.css'
 const notes = [
   { key: 'A', note: 'C' },
   { key: 'S', note: 'D' },
-  { key: 'D', note: 'E' },
+  { key: 'E', note: 'E' },
   { key: 'F', note: 'F' },
   { key: 'G', note: 'G' },
   { key: 'H', note: 'A' },
@@ -14,21 +14,61 @@ const notes = [
 function App() {
   const [score, setScore] = useState(0)
   const [lastNote, setLastNote] = useState('')
+  const [wallet, setWallet] = useState('')
+  const [walletError, setWalletError] = useState('')
+
+  const connectWallet = async () => {
+    setWalletError('')
+
+    if (!window.ethereum) {
+      setWalletError('Please install MetaMask or another Web3 wallet.')
+      return
+    }
+
+    try {
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts',
+      })
+
+      setWallet(accounts[0])
+    } catch (error) {
+      setWalletError('Wallet connection was rejected.')
+    }
+  }
 
   const playNote = (note) => {
     setLastNote(note)
     setScore(score + 10)
   }
 
+  const shortAddress = wallet
+    ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}`
+    : ''
+
   return (
     <main className="app">
       <section className="hero">
         <p className="badge">Built for OPN Builders Season 1</p>
 
+        <div className="wallet-box">
+          {wallet ? (
+            <div className="wallet-connected">
+              Connected: <strong>{shortAddress}</strong>
+            </div>
+          ) : (
+            <button className="wallet-button" onClick={connectWallet}>
+              Connect Wallet
+            </button>
+          )}
+
+          {walletError && <p className="wallet-error">{walletError}</p>}
+        </div>
+
         <h1>Piano Quest</h1>
 
         <p className="tagline">
-          Play piano notes, complete quests, and build your rhythm on OPN Chain.
+          Play piano notes, complete quests, connect your wallet, and build your
+          rhythm on OPN Chain.
         </p>
 
         <div className="stats">
@@ -57,8 +97,8 @@ function App() {
         </div>
 
         <p className="instruction">
-          Click any piano key to earn points. This is the first demo version of
-          Piano Quest.
+          Connect your wallet, click piano keys, earn points, and try the first
+          demo version of Piano Quest.
         </p>
       </section>
     </main>
