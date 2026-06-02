@@ -1,0 +1,137 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(150, 70, 255, 0.35), transparent 35%),
+    linear-gradient(135deg, #070712, #13081f, #050509);
+  color: white;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.hero {
+  width: 100%;
+  max-width: 980px;
+  text-align: center;
+  padding: 48px;
+  border: 1px solid rgba(190, 120, 255, 0.35);
+  border-radius: 28px;
+  background: rgba(15, 15, 30, 0.82);
+  box-shadow: 0 0 60px rgba(140, 70, 255, 0.22);
+}
+
+.badge {
+  display: inline-block;
+  margin: 0 0 20px;
+  padding: 10px 16px;
+  border: 1px solid rgba(190, 120, 255, 0.5);
+  border-radius: 999px;
+  color: #d9b8ff;
+  background: rgba(140, 70, 255, 0.12);
+  font-size: 14px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 72px;
+  line-height: 1;
+  letter-spacing: -2px;
+  background: linear-gradient(90deg, #ffffff, #d79cff, #7c4dff);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.tagline {
+  max-width: 650px;
+  margin: 22px auto 32px;
+  color: #c9c2d8;
+  font-size: 21px;
+  line-height: 1.5;
+}
+
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 34px;
+}
+
+.stats div {
+  min-width: 150px;
+  padding: 16px 22px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.stats span {
+  display: block;
+  margin-bottom: 8px;
+  color: #a9a0bd;
+  font-size: 14px;
+}
+
+.stats strong {
+  font-size: 28px;
+}
+
+.piano {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 28px auto;
+  flex-wrap: wrap;
+}
+
+.piano-key {
+  width: 86px;
+  height: 210px;
+  border: none;
+  border-radius: 0 0 18px 18px;
+  background: linear-gradient(180deg, #ffffff, #d9d9e8);
+  color: #111;
+  cursor: pointer;
+  box-shadow: 0 12px 0 #9b9bac, 0 22px 35px rgba(0, 0, 0, 0.35);
+  transition: 0.15s;
+}
+
+.piano-key:hover {
+  transform: translateY(4px);
+  box-shadow: 0 8px 0 #9b9bac, 0 18px 30px rgba(0, 0, 0, 0.32);
+}
+
+.piano-key:active {
+  transform: translateY(10px);
+  box-shadow: 0 2px 0 #9b9bac, 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.piano-key span {
+  display: block;
+  margin-top: 112px;
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.piano-key small {
+  display: block;
+  margin-top: 8px;
+  color: #6b35ff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.instruction {
+  margin: 28px auto 0;
+  color: #a9a0bd;
+  font-size: 16px;
+}
