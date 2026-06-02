@@ -1,28 +1,96 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
-const notes = [
-  { note: 'C', key: 'A', frequency: 261.63 },
-  { note: 'D', key: 'S', frequency: 293.66 },
-  { note: 'E', key: 'E', frequency: 329.63 },
-  { note: 'F', key: 'F', frequency: 349.23 },
-  { note: 'G', key: 'G', frequency: 392.0 },
-  { note: 'A', key: 'H', frequency: 440.0 },
-  { note: 'B', key: 'J', frequency: 493.88 },
+const whiteNotes = [
+  { note: 'C4', label: 'C', key: 'A', freq: 261.63 },
+  { note: 'D4', label: 'D', key: 'S', freq: 293.66 },
+  { note: 'E4', label: 'E', key: 'D', freq: 329.63 },
+  { note: 'F4', label: 'F', key: 'F', freq: 349.23 },
+  { note: 'G4', label: 'G', key: 'G', freq: 392.0 },
+  { note: 'A4', label: 'A', key: 'H', freq: 440.0 },
+  { note: 'B4', label: 'B', key: 'J', freq: 493.88 },
+  { note: 'C5', label: 'C', key: 'K', freq: 523.25 },
 ]
 
+const blackNotes = [
+  { note: 'C#4', label: 'C#', key: 'W', freq: 277.18, left: 9.5 },
+  { note: 'D#4', label: 'D#', key: 'E', freq: 311.13, left: 22 },
+  { note: 'F#4', label: 'F#', key: 'T', freq: 369.99, left: 47 },
+  { note: 'G#4', label: 'G#', key: 'Y', freq: 415.3, left: 59.5 },
+  { note: 'A#4', label: 'A#', key: 'U', freq: 466.16, left: 72 },
+]
+
+const allNotes = [...whiteNotes, ...blackNotes]
+
+function shortAddress(address) {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
+function getRandomNote() {
+  return allNotes[Math.floor(Math.random() * allNotes.length)]
+}
+
 function App() {
+  const [wallet, setWallet] = useState('')
   const [score, setScore] = useState(0)
   const [lastNote, setLastNote] = useState('None')
-  const [account, setAccount] = useState('')
+  const [targetNote, setTargetNote] = useState(getRandomNote())
+  const [timeLeft, setTimeLeft] = useState(5)
+  const [message, setMessage] = useState('Connect your wallet, then play the note shown on screen.')
+  const [leaderboard, setLeaderboard] = useState([])
+  const [isStarted, setIsStarted] = useState(false)
+  const audioContextRef = useRef(null)
 
-  const shortAddress = (address) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`
+  const playerName = useMemo(() => {
+    if (!wallet) return 'Guest Player'
+    return shortAddress(wallet)
+  }, [wallet])
+
+  function playTone(freq) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext()
+    }
+
+    const audioContext = audioContextRef.current
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+
+    oscillator.type = 'sine'
+    oscillator.frequency.setValueAtTime(freq, audioContext.currentTime)
+
+    gainNode.gain.setValueAtTime(0.22, audioContext.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.6)
+
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
+
+    oscillator.start()
+    oscillator.stop(audioContext.currentTime + 0.6)
   }
 
-  const connectWallet = async () => {
+  function saveLeaderboard(nextScore, name = playerName) {
+    const oldBoard = JSON.parse(localStorage.getItem('pianoQuestLeaderboard') || '[]')
+
+    const newBoard = [
+      ...oldBoard,
+      {
+        name,
+        score: nextScore,
+        date: new Date().toLocaleDateString(),
+      },
+    ]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+
+    localStorage.setItem('pianoQuestLeaderboard', JSON.stringify(newBoard))
+    setLeaderboard(newBoard)
+  }
+
+  async function connectWallet() {
     if (!window.ethereum) {
-      alert('Please install MetaMask, Rabby, or another Web3 wallet.')
+      setMessage('No wallet found. Please install MetaMask or another EVM wallet.')
       return
     }
 
@@ -31,60 +99,123 @@ function App() {
         method: 'eth_requestAccounts',
       })
 
-      setAccount(accounts[0])
+      const connectedWallet = accounts[0]
+      setWallet(connectedWallet)
+      setIsStarted(true)
+
+      const bonusKey = `pianoQuestBonus_${connectedWallet}`
+      const hasBonus = localStorage.getItem(bonusKey)
+
+      if (!hasBonus) {
+        setScore(200)
+        saveLeaderboard(200, shortAddress(connectedWallet))
+        localStorage.setItem(bonusKey, 'true')
+        setMessage('Wallet connected. Welcome bonus: +200 points.')
+      } else {
+        setMessage('Wallet connected. Bonus already claimed for this wallet.')
+      }
     } catch (error) {
-      console.error(error)
-      alert('Wallet connection was cancelled.')
+      setMessage('Wallet connection was rejected.')
     }
   }
 
-  const playTone = (frequency) => {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)()
-    const oscillator = audioContext.createOscillator()
-    const gainNode = audioContext.createGain()
-
-    oscillator.type = 'sine'
-    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime)
-
-    gainNode.gain.setValueAtTime(0.25, audioContext.currentTime)
-    gainNode.gain.exponentialRampToValueAtTime(
-      0.001,
-      audioContext.currentTime + 0.8
-    )
-
-    oscillator.connect(gainNode)
-    gainNode.connect(audioContext.destination)
-
-    oscillator.start()
-    oscillator.stop(audioContext.currentTime + 0.8)
+  function nextRound() {
+    setTargetNote(getRandomNote())
+    setTimeLeft(5)
   }
 
-  const playNote = (item) => {
-    playTone(item.frequency)
-    setLastNote(item.note)
-    setScore((currentScore) => currentScore + 10)
+  function handlePlay(noteItem) {
+    playTone(noteItem.freq)
+    setLastNote(noteItem.label)
+
+    if (!isStarted) {
+      setMessage('Connect your wallet first to start the quest.')
+      return
+    }
+
+    let nextScore = score
+
+    if (noteItem.note === targetNote.note) {
+      nextScore = score + 10
+      setMessage(`Correct note: ${noteItem.label}. You earned +10 points.`)
+    } else {
+      nextScore = Math.max(0, score - 5)
+      setMessage(`Wrong note. You pressed ${noteItem.label}. -5 points.`)
+    }
+
+    setScore(nextScore)
+    saveLeaderboard(nextScore)
+    nextRound()
   }
+
+  useEffect(() => {
+    const savedBoard = JSON.parse(localStorage.getItem('pianoQuestLeaderboard') || '[]')
+    setLeaderboard(savedBoard)
+  }, [])
+
+  useEffect(() => {
+    if (!isStarted) return
+
+    if (timeLeft <= 0) {
+      const nextScore = Math.max(0, score - 5)
+      setScore(nextScore)
+      saveLeaderboard(nextScore)
+      setMessage(`Time is up. You missed ${targetNote.label}. -5 points.`)
+      nextRound()
+      return
+    }
+
+    const timer = setTimeout(() => {
+      setTimeLeft((prev) => prev - 1)
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [timeLeft, isStarted, score, targetNote])
+
+  useEffect(() => {
+    function handleKeyboard(event) {
+      const pressedKey = event.key.toUpperCase()
+      const noteItem = allNotes.find((item) => item.key === pressedKey)
+
+      if (noteItem) {
+        handlePlay(noteItem)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyboard)
+    return () => window.removeEventListener('keydown', handleKeyboard)
+  })
 
   return (
     <main className="page">
       <section className="hero-card">
         <div className="badge">Built for OPN Builders Season 1</div>
 
-        <button className="wallet-button" onClick={connectWallet}>
-          {account ? `Connected: ${shortAddress(account)}` : 'Connect Wallet'}
+        <button className={wallet ? 'wallet-button connected' : 'wallet-button'} onClick={connectWallet}>
+          {wallet ? `Connected: ${shortAddress(wallet)}` : 'Connect Wallet'}
         </button>
 
         <h1>Piano Quest</h1>
 
         <p className="subtitle">
-          Play musical notes, connect your wallet, and explore the rhythm of
-          digital sovereignty on OPN Chain.
+          A Web3 piano game inspired by IOPn, where every correct note brings your rhythm closer to OPN Chain.
         </p>
 
         <p className="iopn-text">
-          Inspired by IOPn, the Internet of People, Piano Quest turns blockchain
-          interaction into a simple musical experience.
+          Connect your wallet, follow the target note, play before the timer ends, and climb the leaderboard.
         </p>
+
+        <div className="game-panel">
+          <div className="target-box">
+            <span>Target note</span>
+            <strong>{targetNote.label}</strong>
+          </div>
+
+          <div className="target-box timer-box">
+            <span>Countdown</span>
+            <strong>{isStarted ? `${timeLeft}s` : '5s'}</strong>
+          </div>
+        </div>
 
         <div className="stats">
           <div className="stat-box">
@@ -98,33 +229,65 @@ function App() {
           </div>
         </div>
 
-        <div className="piano">
-          {notes.map((item) => (
-            <button
-              key={item.note}
-              className="piano-key"
-              onClick={() => playNote(item)}
-            >
-              <span>{item.note}</span>
-              <small>{item.key}</small>
-            </button>
-          ))}
+        <div className="piano-wrapper">
+          <div className="piano">
+            <div className="black-keys">
+              {blackNotes.map((item) => (
+                <button
+                  key={item.note}
+                  className="black-key"
+                  style={{ left: `${item.left}%` }}
+                  onClick={() => handlePlay(item)}
+                >
+                  <span>{item.label}</span>
+                  <small>{item.key}</small>
+                </button>
+              ))}
+            </div>
+
+            <div className="white-keys">
+              {whiteNotes.map((item) => (
+                <button
+                  key={item.note}
+                  className="white-key"
+                  onClick={() => handlePlay(item)}
+                >
+                  <span>{item.label}</span>
+                  <small>{item.key}</small>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <p className="instruction">
-          Click any piano key to hear the correct note tone, earn points, and
-          try the first demo version of Piano Quest.
-        </p>
+        <p className="instruction">{message}</p>
 
         <div className="links">
           <a href="https://iopn.io/" target="_blank" rel="noreferrer">
             Explore IOPn
           </a>
-
           <a href="https://faucet.iopn.tech/" target="_blank" rel="noreferrer">
             OPN Testnet Faucet
           </a>
         </div>
+
+        <section className="leaderboard">
+          <h2>Leaderboard</h2>
+
+          {leaderboard.length === 0 ? (
+            <p className="empty-board">No players yet. Connect wallet and start playing.</p>
+          ) : (
+            <div className="board-list">
+              {leaderboard.map((player, index) => (
+                <div className="board-row" key={`${player.name}-${index}`}>
+                  <span>#{index + 1}</span>
+                  <strong>{player.name}</strong>
+                  <em>{player.score} pts</em>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </section>
     </main>
   )
